@@ -1,6 +1,5 @@
 #include "sljex.h"
 
-//references %TECODE%/vector
 #include "vector/vector.h"
 
 #include "custom/checking.h"
