@@ -1,9 +1,0 @@
-on linux you will need to do
-
-export LD_LIBRARY_PATH=../libs
-
-or similar to run the examples
-
-on windows, just copy them from libs to here or do something like
-
-set PATH=%PATH%;../libs
