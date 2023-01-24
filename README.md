@@ -5,6 +5,7 @@ A (believed to be) C99 standards compliant, thread-safe C exceptions library
 # Building
 
 `make`
+
 `make examples`
 
 # Installation
@@ -30,14 +31,14 @@ A (believed to be) C99 standards compliant, thread-safe C exceptions library
 * sljex is subject to the limitations of setjmp & longjmp, therefore (since try calls setjmp,) modifying any non-volatile local variables in the try block renders them inaccessible if an exception is caught (, which calls longjmp).
 EX:
 ```C
-    int i = 4;
-	try{
-		i = 6;/*makes i invalid outside of try block if catchany executes*/
-		throw(EXGENERIC);
-	}catchany{
-		i = 4;/*undefined behavior*/
-	}finally;
-	i = 5;/*undefined behavior if an exception was caught above*/
+int i = 4;
+try{
+    i = 6;/*makes i invalid outside of try block if catchany executes*/
+    throw(EXGENERIC);
+}catchany{
+    i = 4;/*undefined behavior*/
+}finally;
+i = 5;/*undefined behavior if an exception was caught above*/
 ```
 
 * new exception type values should always be greater than EXGENERIC, and can never be 0.
@@ -47,29 +48,29 @@ EX:
   * If any exception is uncaught in a try block, the program will exit and report an unhandled exception. Exceptions must be explicitly rethrown in this case.
 EX:
 ```C
-	#define EXOTHER (EXGENERIC + 1)
-	void func1(void){
-		throw(EXGENERIC);
-	}
-	//will exit the program since EXGENERIC goes unhandled
-	void func2(void) {
-		try{
-			func1();
-		}catch(EXOTHER){
-			return;
-		}finally;
-	}
-	//rethrows any unexpected exceptions
-	//to propagate to another handler
-	void func2_fixed(void) {
-		try{
-			func1();
-		}catch(EXOTHER){
-			return;
-		}catchany{
-			rethrow;
-		}finally;
-	}
+#define EXOTHER (EXGENERIC + 1)
+void func1(void){
+    throw(EXGENERIC);
+}
+//will exit the program since EXGENERIC goes unhandled
+void func2(void) {
+    try{
+        func1();
+    }catch(EXOTHER){
+        return;
+    }finally;
+}
+//rethrows any unexpected exceptions
+//to propagate to another handler
+void func2_fixed(void) {
+    try{
+        func1();
+    }catch(EXOTHER){
+        return;
+    }catchany{
+        rethrow;
+    }finally;
+}
 ```
 
 * the library is deinitialized using atexit, and thus should not be loaded using dlopen (unix), LoadLibrary (win32), or similar, which may unload the library before calling atexit (will likely SIGSEGV)
@@ -78,10 +79,10 @@ EX:
 
 Since exception memory is cleaned up in only 3 conditions:
 
-1. start of finally block
+1. start of a finally statement
 2. when throw is used
 3. when program exits normally (deinits entire library)
-X4. start of try block (probably could, doesn't)
+4. ~~start of try block~~ (could, currently doesn't)
 
 Catching an exception in a function and returning from the function inside the catch block results in an allocated exception state being marked as used, but not yet released until one of the 3 conditions occur.
 
