@@ -15,12 +15,21 @@ You should have received a copy of the GNU Lesser General Public License along w
 #include <stdbool.h>
 
 ///Basic exception code defined by default.
-///All other exception codes must be greater than EXGENERIC
+///All other exception codes must be greater than EXGENERIC.
 #define EXGENERIC 1
+
+///Call before using sljex features to initialize library.
+///Does not add sljex_deinit to atexit and must be called manually.
+bool sljex_initNoCleanup(void);
 
 ///Call before using sljex features to initialize library.
 ///Also adds sljex_deinit to atexit to deinit library on exit.
 bool sljex_init(void);
+
+///Call before program end if library was initialized
+/// with sljex_initNoCleanup, otherwise this is called automatically
+/// at program exit and should not be called manually
+void sljex_deinit(void);
 
 ///Fetches the code of the current exception.
 ///Panics if there is no current exception (outside catch/catchany).

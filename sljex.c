@@ -27,6 +27,7 @@ You should have received a copy of the GNU Lesser General Public License along w
 typedef void * jmp_buf_ptr;
 
 bool sljex_init(void);
+void sljex_deinit(void);
 jmp_buf_ptr sljex_trybuf_(void);
 bool sljex_catch_(int excode);
 bool sljex_catchany_(void);
@@ -40,7 +41,6 @@ static bool sljex_exstate_vinit(void * * statespace);
 static void sljex_exstate_vdeinit(void * * statespace);
 static bool vector_vinit(void * * vecspace);
 static void vector_vdeinit(void * * vecspace);
-static void sljex_deinit(void);
 
 typedef struct sljex_exstate {
     jmp_buf jb;
@@ -57,16 +57,19 @@ static vector global_local_vec_holder;
 //global used to sync pushes to global_local_vec_holder
 static pthread_mutex_t mtx;
 
-//initialize the library
+//initialize the library without automatic atexit cleanup
 //pre: this is called exactly once before
 //     using any library functions
 //post: the library will be ready for use
 //returns: false if initialization fails,
 //         library is left in an uninitialized state
-//note: stores sljex_deinit on atexit stack, to automatically perform cleanup,
-//      do not load this library at runtime with custom/dynamic or similar,
-//      or at least do not close the library.
-bool sljex_init(void) {
+//note: does not store sljex_deinit on atexit stack,
+//      sljex_deinit must be called manually before program exit,
+//      and memory will leak to OS if program ends before it is called.
+//
+//      the library may be loaded by the user at runtime since
+//      deinitialization is handled manually.
+bool sljex_initNoCleanup(void) {
     if(pthread_mutex_init(&mtx, NULL)){
         return false;
     }else if(pthread_key_create(&tlvec, NULL)){
@@ -77,15 +80,32 @@ bool sljex_init(void) {
         pthread_key_delete(tlvec);
         return false;
     }
-    atexit(sljex_deinit);
     return true;
 }
 
+//initialize the library
+//pre: this is called exactly once before
+//     using any library functions
+//post: the library will be ready for use
+//returns: false if initialization fails,
+//         library is left in an uninitialized state
+//note: stores sljex_deinit on atexit stack, to automatically perform cleanup,
+//      do not load this library at runtime with custom/dynamic or similar,
+//      or at least do not close the library.
+bool sljex_init(void) {
+    if(sljex_initNoCleanup()){
+        atexit(sljex_deinit);
+        return true;
+    }
+    return false;
+}
+
 //deinitializes the library
-//note: called automatically using atexit
+//note: called automatically using atexit if initialized with sljex_init
+//      and not sljex_initNoCleanup
 //pre: the library has been initialized exactly once
 //post: the library is fully deinitialized
-static void sljex_deinit(void) {
+void sljex_deinit(void) {
     vector_deinit(&global_local_vec_holder);
     pthread_key_delete(tlvec);
     pthread_mutex_destroy(&mtx);
