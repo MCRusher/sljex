@@ -1,5 +1,5 @@
 CC=gcc
-PREFIX=/usr/local/
+PREFIX=/usr/local
 CFLAGS=-O2 -pthread --shared -fPIC
 
 .PHONY: all
@@ -15,7 +15,7 @@ clean :
 .PHONY: install
 install : libsljex.so
 	cp libsljex.so $(PREFIX)/lib/libsljex.so
-	cp sljex.h $(PREFIX)/include/
+	cp sljex.h $(PREFIX)/include/sljex/sljex.h
 
 .PHONY: examples
 examples : libsljex.so
