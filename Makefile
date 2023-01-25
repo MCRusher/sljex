@@ -14,6 +14,7 @@ clean :
 
 .PHONY: install
 install : libsljex.so
+	mkdir -p $(PREFIX)/include/sljex/
 	cp libsljex.so $(PREFIX)/lib/libsljex.so
 	cp sljex.h $(PREFIX)/include/sljex/sljex.h
 
