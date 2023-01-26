@@ -1,6 +1,6 @@
 CC=gcc
 PREFIX=/usr/local
-CFLAGS=-O2 -pthread -shared -fPIC
+CFLAGS=-O2 -pthread -shared -fPIC -Wall -Wpedantic
 
 .PHONY: all
 all : libsljex.so

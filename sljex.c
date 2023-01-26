@@ -24,7 +24,7 @@ You should have received a copy of the GNU Lesser General Public License along w
 #define pthread_key_create(...) 0
 #define pthread_getspecific(tlv) tlv
 #define pthread_setspecific(tlv, val) (tlv = val, 0)
-#define pthread_key_delete(...) 0
+#define pthread_key_delete(...) (void)0
 #endif
 
 ///takes a fmt string and variadics, prints to stderr and calls exit(EXIT_FAILURE)
