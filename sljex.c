@@ -17,6 +17,16 @@ You should have received a copy of the GNU Lesser General Public License along w
 
 #include <pthread.h>
 
+//leverage C11 native support for thread local variables,
+// should be faster than get/setspecific
+#if __STDC_VERSION__ >= 201112L
+#define pthread_key_t _Thread_local vector *
+#define pthread_key_create(...) 0
+#define pthread_getspecific(tlv) tlv
+#define pthread_setspecific(tlv, val) (tlv = val, 0)
+#define pthread_key_delete(...) 0
+#endif
+
 ///takes a fmt string and variadics, prints to stderr and calls exit(EXIT_FAILURE)
 #define panic(...) do{fprintf(stderr, __VA_ARGS__);exit(EXIT_FAILURE);}while(0)
 
