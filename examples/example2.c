@@ -8,47 +8,49 @@
 #define EXNEGATIVE (EXOVERFLOW + 1)
 
 int add(int a, int b) {
-	if((b > 0) && (INT_MAX - b < a)
-	|| (b < 0) && (INT_MIN - b > a)){
-		throw(EXOVERFLOW);//implicit exstr is "EXOVERFLOW"
-	}
-	return a + b;
+    if((b > 0) && (INT_MAX - b < a)
+    || (b < 0) && (INT_MIN - b > a)){
+        throw(EXOVERFLOW);//implicit exstr is "EXOVERFLOW"
+    }
+    return a + b;
 }
 
 int add2(int a, int b) {
-	if(a < 0){
-		throw(EXNEGATIVE);
-	}
-	//add's EXOVERFLOW exception propagates through add2
-	try{
-		return add(a, add(b, b));
-	}catch(EXGENERIC){
-		return 0;
-	}catchany{
-		//allows EXOVERFLOW to propagate
-		// through a try-finally handler
-		rethrow;
-	}finally;
+    if(a < 0){
+        throw(EXNEGATIVE);
+    }
+    int sum;
+    //add's EXOVERFLOW exception propagates through add2
+    try{
+        sum = add(a, add(b, b));
+    }catch(EXGENERIC){
+        return 0;
+    }catchany{
+        //allows EXOVERFLOW to propagate
+        // through a try-finally handler
+        rethrow;
+    }finally;
+    return sum;
 }
 
 int main(void) {
-	if(!sljex_init()){
-		return 1;
-	}
-	
-	int a = 1;
-	int b = INT_MAX;
-	
-	try{
-		printf("%d + (%d * 2) = %d\n", a, b, add2(a, b));
-	}catch(EXOVERFLOW){
-		puts("the operation overflowed.");
-	}catch(EXNEGATIVE){
-		puts("a was negative.");
-	}catchany{//without this, the program would exit from any unhandled exception
-		printf(
-			"caught unexpected exception \"%s\"(%d)\n",
-			sljex_exstr(), sljex_excode()
-		);
-	}finally;
+    if(!sljex_init()){
+        return 1;
+    }
+    
+    int a = 1;
+    int b = INT_MAX;
+    
+    try{
+        printf("%d + (%d * 2) = %d\n", a, b, add2(a, b));
+    }catch(EXOVERFLOW){
+        puts("the operation overflowed.");
+    }catch(EXNEGATIVE){
+        puts("a was negative.");
+    }catchany{//without this, the program would exit from any unhandled exception
+        printf(
+            "caught unexpected exception \"%s\"(%d)\n",
+            sljex_exstr(), sljex_excode()
+        );
+    }finally;
 }

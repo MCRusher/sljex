@@ -1,6 +1,6 @@
 CC=gcc
 PREFIX=/usr/local
-CFLAGS=-O2 -pthread --shared -fPIC
+CFLAGS=-O2 -pthread -shared -fPIC
 
 .PHONY: all
 all : libsljex.so
@@ -20,7 +20,7 @@ install : libsljex.so
 
 .PHONY: examples
 examples : libsljex.so
-	$(CC) examples/example1.c -o examples/example1 -lsljex -L. -Wl,-R..
-	$(CC) examples/example2.c -o examples/example2 -lsljex -L. -Wl,-R..
-	$(CC) examples/example3.c -o examples/example3 -lsljex -L. -Wl,-R..
-	$(CC) examples/example4.c -o examples/example4 -lsljex -L. -Wl,-R..
+	$(CC) examples/example1.c -o examples/example1 -lsljex -L. -Wl,-rpath=..
+	$(CC) examples/example2.c -o examples/example2 -lsljex -L. -Wl,-rpath=..
+	$(CC) examples/example3.c -o examples/example3 -lsljex -L. -Wl,-rpath=..
+	$(CC) examples/example4.c -o examples/example4 -lsljex -L. -Wl,-rpath=..
