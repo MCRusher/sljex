@@ -52,11 +52,12 @@ static void sljex_exstate_vdeinit(void * * statespace);
 static bool vector_vinit(void * * vecspace);
 static void vector_vdeinit(void * * vecspace);
 
+//holds all the internal information of an exception, one per exception
 typedef struct sljex_exstate {
-    jmp_buf jb;
-    int excode;
-    char const * exstr;
-    bool caught;
+    jmp_buf jb;         //holds the info that setjmp/longjmp uses
+    int excode;         //stores the exception code
+    char const * exstr; //stores the exception message
+    bool caught;        //indicates whether the exception has already been caught
 } sljex_exstate;
 
 //holds a reference to a vector<exstate> for each thread,

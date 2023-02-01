@@ -34,7 +34,7 @@ void sljex_deinit(void);
 ///Fetches the code of the current exception.
 ///Panics if there is no current exception (outside catch/catchany).
 int sljex_excode(void);
-///Fetches the code of the current exception.
+///Fetches the message of the current exception.
 ///Panics if there is no current exception (outside catch/catchany).
 char const * sljex_exstr(void);
 
