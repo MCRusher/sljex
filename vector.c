@@ -21,7 +21,7 @@ bool vector_init(vector * v, bool(*init)(void * *), void(*deinit)(void * *)) {
     
     v->count = 0;
     v->_ = malloc(VECTOR_INITIAL * sizeof(void *));
-    if(v == NULL){
+    if(v->_ == NULL){
         return false;
     }
     v->max = VECTOR_INITIAL;
