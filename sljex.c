@@ -1,3 +1,5 @@
+///@file
+///@internal
 /*
 Copyright (C) 2023 MCRusher
 
@@ -52,34 +54,43 @@ static void sljex_exstate_vdeinit(void * * statespace);
 static bool vector_vinit(void * * vecspace);
 static void vector_vdeinit(void * * vecspace);
 
-//holds all the internal information of an exception, one per exception
+///holds all the internal information of an exception
 typedef struct sljex_exstate {
-    jmp_buf jb;         //holds the info that setjmp/longjmp uses
-    int excode;         //stores the exception code
-    char const * exstr; //stores the exception message
-    bool caught;        //indicates whether the exception has already been caught
+    ///holds the info that setjmp/longjmp uses
+    jmp_buf jb;
+    ///stores the exception code
+    int excode;
+    ///stores the exception message
+    char const * exstr;
+    ///indicates whether the exception has already been caught
+    bool caught;
 } sljex_exstate;
 
-//holds a reference to a vector<exstate> for each thread,
-// allocated and given by global_local_vec_holder
+///holds a reference to a vector<exstate> for each thread,
+/// allocated and given by global_local_vec_holder
 static pthread_key_t tlvec;
-//stores the vector<exstate> threadlocal values to destroy all at once
+///stores the vector<exstate> threadlocal values to destroy all at once
 static vector global_local_vec_holder;
-//global used to sync pushes to global_local_vec_holder
+///global used to sync pushes to global_local_vec_holder
 static pthread_mutex_t mtx;
 
-//initialize the library without automatic atexit cleanup
-//pre: this is called exactly once before
-//     using any library functions
-//post: the library will be ready for use
-//returns: false if initialization fails,
-//         library is left in an uninitialized state
-//note: does not store sljex_deinit on atexit stack,
-//      sljex_deinit must be called manually before program exit,
-//      and memory will leak to OS if program ends before it is called.
-//
-//      the library may be loaded by the user at runtime since
-//      deinitialization is handled manually.
+/**
+    initialize the library without automatic atexit cleanup
+@pre
+    this is called exactly once before using any library functions
+@post
+    the library will be ready for use
+@returns
+    false if initialization fails,
+    library is left in an uninitialized state
+@note
+    does not store sljex_deinit on atexit stack,
+    sljex_deinit must be called manually before program exit,
+    and memory will leak to OS if program ends (or panics) before it is called.
+@note
+    the library may be loaded by the user at runtime since
+    deinitialization is handled manually.
+*/
 bool sljex_initNoCleanup(void) {
     if(pthread_mutex_init(&mtx, NULL)){
         return false;
@@ -94,15 +105,21 @@ bool sljex_initNoCleanup(void) {
     return true;
 }
 
-//initialize the library
-//pre: this is called exactly once before
-//     using any library functions
-//post: the library will be ready for use
-//returns: false if initialization fails,
-//         library is left in an uninitialized state
-//note: stores sljex_deinit on atexit stack, to automatically perform cleanup,
-//      do not load this library at runtime with custom/dynamic or similar,
-//      or at least do not close the library.
+/**
+    initialize the library
+@pre
+    this is called exactly once before
+    using any library functions
+@post
+    the library will be ready for use
+@returns
+    false if initialization fails,
+        library is left in an uninitialized state
+@note
+    stores sljex_deinit on atexit stack, to automatically perform cleanup,
+    do not load this library at runtime with custom/dynamic or similar,
+    or at least do not close the library.
+*/
 bool sljex_init(void) {
     if(sljex_initNoCleanup()){
         atexit(sljex_deinit);
@@ -111,23 +128,34 @@ bool sljex_init(void) {
     return false;
 }
 
-//deinitializes the library
-//note: called automatically using atexit if initialized with sljex_init
-//      and not sljex_initNoCleanup
-//pre: the library has been initialized exactly once
-//post: the library is fully deinitialized
+/**
+    deinitializes the library
+@pre
+    the library has been initialized exactly once
+@post
+    the library is fully deinitialized
+@note
+    called automatically using atexit if initialized with sljex_init
+    and not sljex_initNoCleanup
+*/
 void sljex_deinit(void) {
     vector_deinit(&global_local_vec_holder);
     pthread_key_delete(tlvec);
     pthread_mutex_destroy(&mtx);
 }
 
-//returns a jmp_buf reference
-//pre: library has been initialized exactly once
-//post: a new exstate is pushed to the global stack,
-//      and its jmp_buf member is returned as a reference.
-//note: calls panic on failure and exits program
-//note: the library should be properly deinitialized even upon failure
+/**
+    internal function used in the try macro,
+    not meant to be called directly
+@pre
+    library has been initialized exactly once
+@post
+    panics if mutex cannot be locked or thread local storage cannot be set,
+    otherwise a new exstate is pushed to the global stack,
+    and its jmp_buf member is returned as a reference.
+@note
+    the library should be properly deinitialized even upon failure
+*/
 jmp_buf_ptr sljex_trybuf_(void) {
     //get the current thread's exception stack
     vector * local_vec = pthread_getspecific(tlvec);
@@ -136,7 +164,7 @@ jmp_buf_ptr sljex_trybuf_(void) {
         if(pthread_mutex_lock(&mtx)){
             panic("sljex: failed to lock mutex.\n");
         }
-        //call panic if adding a new default-initialized
+        //panic if adding a new default-initialized
         // vector to the global stack fails
         if(!vector_pushInit(&global_local_vec_holder)){
             //cannot delete a mutex while locked
@@ -146,7 +174,7 @@ jmp_buf_ptr sljex_trybuf_(void) {
         }
         //get a reference to the new vector instance
         local_vec = vector_getLast(&global_local_vec_holder);
-        //call util::panic if setting threadlocal storage to
+        //panic if setting threadlocal storage to
         // the new vector instance reference fails,
         if(pthread_setspecific(tlvec, local_vec)){
             //cannot delete a mutex while locked
@@ -158,7 +186,7 @@ jmp_buf_ptr sljex_trybuf_(void) {
     }
     
     //create a new default initialzed exstate instance,
-    // and call panic if initialization fails
+    // and panic if initialization fails
     if(!vector_pushInit(local_vec)){
         panic("sljex: failed to initalize threadlocal exception state.\n");
     }
@@ -168,11 +196,19 @@ jmp_buf_ptr sljex_trybuf_(void) {
     return local_state->jb;
 }
 
-//pre: the library has been initialized exactly once
-//post: false if excode does not match the current exception's,
-//returns: calls panic if called without an associated try statement
-//note: will only ever be called when an exception has been thrown
-//      by virture of the structure of the library macros
+/**
+    internal function used in catch macro,
+    not meant to be called directly
+@pre
+    the library has been initialized exactly once
+@post
+    panics if called without an associated try statement
+@returns
+    returns false if excode does not match the exception,
+@note
+    will only ever be called when an exception has been thrown
+    by virture of the structure of the library macros
+*/
 bool sljex_catch_(int excode) {
     //obtain a reference to the current thread's exception stack
     vector * local_vec = pthread_getspecific(tlvec);
@@ -182,7 +218,7 @@ bool sljex_catch_(int excode) {
     //If there are no exceptions on the stack
     // or the current exception was caught already,
     // then catch was called without a
-    // try statement and panic is called
+    // try statement and function will panic
     if(vector_size(local_vec) == 0 || (local_state = vector_getLast(local_vec))->caught){
         panic("sljex: catch without try.\n");
     }
@@ -198,11 +234,19 @@ bool sljex_catch_(int excode) {
     return false;
 }
 
-//pre: the library has been initialized exactly once,
-//post: always returns true
-//returns: calls panic if called without an associated try statement
-//note: will only ever be called when an exception has been thrown
-//      by virture of the structure of the library macros
+/**
+    internal function used in the catchany macro,
+    not meant to be called directly
+@pre
+    the library has been initialized exactly once,
+@post
+    always returns true
+@returns
+    calls panic if called without an associated try statement
+@note
+    will only ever be called when an exception has been thrown
+    by virture of the structure of the library macros
+*/
 bool sljex_catchany_(void) {
     //obtain a reference to the current thread's exception stack
     vector * local_vec = pthread_getspecific(tlvec);
@@ -212,7 +256,7 @@ bool sljex_catchany_(void) {
     //If there are no exceptions on the stack
     // or the current exception was caught already,
     // then catch was called without a
-    // try statement and panic is called
+    // try statement and function will panic
     if(vector_size(local_vec) == 0 || (local_state = vector_getLast(local_vec))->caught){
         panic("sljex: catchany without try.\n");
     }
@@ -222,11 +266,17 @@ bool sljex_catchany_(void) {
     return true;
 }
 
-//returns a jmp_buf reference
-//pre: library has been initialized exactly once
-//note: calls panic if called outside a try block,
-//      intentional behavior that mimics C++'s exception handling, not a failure
-//note: the library should be properly deinitialized when panic is called
+/**
+    internal function used in the throw and throwWithMsg macros,
+    not meant to be called directly
+@pre
+    library has been initialized exactly once
+@note
+    calls panic if called outside a try block,
+    intentional behavior that mimics C++'s exception handling, not a failure
+@note
+    the library should be properly deinitialized when panic is called
+*/
 jmp_buf_ptr sljex_throwbuf_(int excode, char const * exstr) {
     //obtain a reference to the current thread's exception stack
     vector * local_vec = pthread_getspecific(tlvec);
@@ -236,7 +286,7 @@ jmp_buf_ptr sljex_throwbuf_(int excode, char const * exstr) {
     }
     //if there is no valid exstate instance to assign to,
     // then throw was called outside a catch block and is an
-    // unhandled exception, and panic is called
+    // unhandled exception, and the function panics
     if(vector_size(local_vec) == 0){
         panic("sljex_terminate: unhandled \"%s\"(%d) thrown.\n", exstr, excode);
     }
@@ -249,12 +299,19 @@ jmp_buf_ptr sljex_throwbuf_(int excode, char const * exstr) {
     return local_state->jb;
 }
 
-//returns a jmp_buf reference
-//pre: library has been initialized exactly once
-//note: fails and calls panic if called outside catch/catchany,
-//      also calls panic if called outside a try block,
-//      intentional behavior that mimics C++'s exception handling, not a failure.
-//note: the library should be properly deinitialized when panic is called
+/**
+    internal function used by the rethrow macro,
+    not meant to be called directly
+@pre
+    library has been initialized exactly once
+@post
+    panics if called outside a try block
+@note
+    intentionally calls panic if called outside catch/catchany,
+    to mimics C++'s exception handling, not a failure.
+@note
+    the library should be properly deinitialized when panic is called
+*/
 jmp_buf_ptr sljex_rethrowbuf_(void) {
     //obtain a reference to the current thread's exception stack
     vector * local_vec = pthread_getspecific(tlvec);
@@ -263,7 +320,7 @@ jmp_buf_ptr sljex_rethrowbuf_(void) {
     //stores current caught exception into local_state
     //if there is no current caught exception to rethrow,
     // rethrow was called outside catch/catchany,
-    // and panic is called to report a programmer error.
+    // and the function panics to report a programmer error.
     if(vector_size(local_vec) == 0 || !(local_state = (sljex_exstate *)vector_getLast(local_vec))->caught){
         panic("sljex: rethrow outside catch/catchany.\n");
     }
@@ -276,7 +333,7 @@ jmp_buf_ptr sljex_rethrowbuf_(void) {
     
     //if there is no valid exstate instance to assign to,
     // then rethrow was called outside a catch block and is an
-    // unhandled exception, and panic is called
+    // unhandled exception, and the function panics
     if(vector_size(local_vec) == 0){
         panic("sljex_terminate: unhandled \"%s\"(%d) thrown.\n", exstr, excode);
     }
@@ -290,14 +347,18 @@ jmp_buf_ptr sljex_rethrowbuf_(void) {
     return local_state->jb;
 }
 
-//cleans up exstate in the case that no exceptions were thrown,
-// and terminates program if there is an uncaught exception remaining
-//pre: library has been initialized exactly once,
-//     and finally block follows a try block
-//post: returns no value, cleans up exception state
-//      created by try
-//note: calls panic if called with an active exception state (uncaught exception),
-//      intentional behavior that mimics C++'s exception handling, not a failure
+/**
+    cleans up exstate in the case that no exceptions were thrown,
+    and terminates program if there is an uncaught exception remaining
+@pre
+    library has been initialized exactly once,
+    and finally block follows a try block
+@post
+    cleans up exception state created by try
+@note
+    intentionally calls panic if called with an active exception state (unvaught exception)
+    to mimics C++'s exception handling, not a failure.
+*/
 void sljex_finally_(void) {
     //obtain a reference to the current thread's exception stack
     vector * local_vec = pthread_getspecific(tlvec);
@@ -307,7 +368,7 @@ void sljex_finally_(void) {
     //stores reference to exception state being caught
     sljex_exstate * local_state = vector_getLast(local_vec);
     //if the current exstate excode is not 0 and is uncaught,
-    // it is an unhandled exception, and panic is called
+    // it is an unhandled exception, and the function panics
     if(local_state->excode != 0 && !local_state->caught){
         panic(
             "sljex_terminate: unhandled \"%s\"(%d) thrown.\n",
@@ -318,17 +379,23 @@ void sljex_finally_(void) {
     vector_popDeinit(local_vec);
 }
 
-//pre: library has been initialized exactly once,
-//     and the function is called inside a catch/catchany block
-//post: returns the integer code representing the exception type,
-//      fails and calls panic if called outside catch/catchany
+/**
+    gets the integer code of the current exception
+@pre
+    library has been initialized exactly once,
+    and the function is called inside a catch/catchany block
+@post
+    fails and calls panic if called outside catch/catchany
+@returns
+    the integer code representing the exception type
+*/
 int sljex_excode(void) {
     vector * local_vec = pthread_getspecific(tlvec);
     //stores reference to exception state being caught
     sljex_exstate * local_state;
     //if there is no valid exstate instance to access,
     // then sljex_excode was called outside a catch block
-    // and panic is called to report a programmer error
+    // and the function panics to report a programmer error
     if(vector_size(local_vec) == 0 || !(local_state = vector_getLast(local_vec))->caught){
         panic("sljex: sljex_excode outside catch/catchany.\n");
     }
@@ -336,17 +403,26 @@ int sljex_excode(void) {
     return local_state->excode;
 }
 
-//pre: library has been initialized exactly once,
-//     and the function is called inside a catch/catchany block
-//post: returns the string value accompanying the exception type,
-//      fails and calls panic if called outside catch/catchany
+/**
+    gets the string message of the current exception
+@pre
+    library has been initialized exactly once,
+    and the function is called inside a catch/catchany block
+@post
+    fails and calls panic if called outside catch/catchany
+@returns
+    the string value accompanying the exception type
+@note
+    the message will be the stringized exception code unless
+    throwWithMsg is used
+*/
 char const * sljex_exstr(void) {
     vector * local_vec = pthread_getspecific(tlvec);
     //stores reference to exception state being caught
     sljex_exstate * local_state;
     //if there is no valid exstate instance to access,
     // then sljex_excode was called outside a catch block
-    // and panic is called to report a programmer error
+    // and the function panics to report a programmer error
     if(vector_size(local_vec) == 0 || !(local_state = vector_getLast(local_vec))->caught){
         panic("sljex: sljex_exstr outside catch/catchany.\n");
     }
@@ -354,10 +430,16 @@ char const * sljex_exstr(void) {
     return local_state->exstr;
 }
 
-//allocates a new exstate in-place
-//pre: statespace represents an unallocated exstate slot in a vector
-//post: statespace is assigned a new valid, allocated exspace instance
-//returns: false if fails to initialize, statespace is unchanged
+/**
+    internal function passed to vector_init that allocates a new exstate in-place,
+    should not be called manually
+@pre
+    statespace represents an unallocated exstate slot in a vector
+@post
+    statespace is assigned a new valid, allocated exspace instance
+@returns
+    false if fails to initialize, statespace is unchanged
+*/
 bool sljex_exstate_vinit(void * * statespace) {
     //allocate memory for the new exstate
     sljex_exstate * sp = malloc(sizeof(sljex_exstate));
@@ -374,17 +456,28 @@ bool sljex_exstate_vinit(void * * statespace) {
     return true;
 }
 
-//deinitializes an exstate in-place
-//pre: statespace is a valid, allocated exstate instance
-//post: statespace's instance will be deallocated
+/**
+    internal function passed to vector_init that deinitializes an exstate in-place,
+    should not be called manually
+@pre
+    statespace is a valid, allocated exstate instance
+@post
+    statespace's instance will be deallocated
+*/
 static void sljex_exstate_vdeinit(void * * statespace) {
     free(*statespace);
 }
 
-//allocates a new vector in-place
-//pre: vecspace represents an unallocated vector slot in another vector
-//post: vecspace is assigned a new valid, allocated vector instance
-//returns: false if fails to initialize, statespace is unchanged
+/**
+    internal function passed to vector_init that allocates a new vector in-place,
+    should not be called manually
+@pre
+    vecspace represents an unallocated vector slot in another vector
+@post
+    vecspace is assigned a new valid, allocated vector instance
+@returns
+    false if fails to initialize, statespace is unchanged
+*/
 static bool vector_vinit(void * * vecspace) {
     //allocate memory for vector
     vector * vp = malloc(sizeof(vector));
@@ -397,9 +490,14 @@ static bool vector_vinit(void * * vecspace) {
     return true;
 }
 
-//deinitializes an vector instance in-place
-//pre: vecspace is a valid, allocated vector instance
-//post: vecspace's instance will be deallocated
+/**
+    internal function passed to vector_init that deinitializes an vector instance in-place,
+    should not be called manually
+@pre
+    vecspace is a valid, allocated vector instance
+@post
+    vecspace's instance will be deallocated
+*/
 static void vector_vdeinit(void * * vecspace) {
     vector_deinit(*vecspace);
 }

@@ -32,6 +32,7 @@ bool vector_init(vector * v, bool(*init)(void * *), void(*deinit)(void * *)) {
 
 void vector_deinit(vector * v) {
     assert(v != NULL);
+    
     if(v->_ != NULL){
         if(v->deinit != NULL){
             for(size_t i = 0; i < v->count; i++){
