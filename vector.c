@@ -30,15 +30,15 @@ You should have received a copy of the GNU Lesser General Public License along w
 bool vector_init(vector * v, bool(*init)(void * *), void(*deinit)(void * *)) {
     assert(v != NULL);
     
-    v->_ = malloc(VECTOR_INITIAL * sizeof(void *));
-    if(v->_ == NULL){
+    v->data = malloc(VECTOR_INITIAL * sizeof(void *));
+    if(v->data == NULL){
         return false;
     }
     v->count = 0;
     v->max = VECTOR_INITIAL;
     v->init = init;
     v->deinit = deinit;
-    
+
     return true;
 }
 
@@ -54,15 +54,15 @@ void vector_deinit(vector * v) {
     
     //prevent deinit from being called on
     // an already uninitialized vector
-    if(v->_ != NULL){
+    if(v->data != NULL){
         //if the vector has a deinitializer, deinit all elements
         if(v->deinit != NULL){
             for(size_t i = 0; i < v->count; i++){
-                v->deinit(&v->_[i]);
+                v->deinit(&v->data[i]);
             }
         }
-        free(v->_);
-        v->_ = NULL;
+        free(v->data);
+        v->data = NULL;
     }
 }
 
@@ -77,20 +77,20 @@ void vector_deinit(vector * v) {
     false if reallocation fails
 */
 bool vector_push(vector * v, void * p) {
-    assert(v != NULL && v->_ != NULL);
+    assert(v != NULL && v->data != NULL);
     assert(p != NULL);
     
     //grow vector capacity by 2x if full
     if(v->count == v->max){
         v->max *= 2;
-        void * tmp = realloc(v->_, v->max * sizeof(void *));
+        void * tmp = realloc(v->data, v->max * sizeof(void *));
         if(tmp == NULL){
             return false;
         }
-        v->_ = tmp;
+        v->data = tmp;
     }
 
-    v->_[v->count++] = p;
+    v->data[v->count++] = p;
     return true;
 }
 
@@ -106,20 +106,20 @@ bool vector_push(vector * v, void * p) {
     false if reallocation or initializer fails
 */
 bool vector_pushInit(vector * v) {
-    assert(v != NULL && v->_ != NULL);
+    assert(v != NULL && v->data != NULL);
     assert(v->init != NULL);
     
     //grow vector capacity by 2x if full
     if(v->count == v->max){
         v->max *= 2;
-        void * tmp = realloc(v->_, v->max * sizeof(void *));
+        void * tmp = realloc(v->data, v->max * sizeof(void *));
         if(tmp == NULL){
             return false;
         }
-        v->_ = tmp;
+        v->data = tmp;
     }
 
-    return v->init(&v->_[v->count++]);
+    return v->init(&v->data[v->count++]);
 }
 
 /**
@@ -130,7 +130,7 @@ bool vector_pushInit(vector * v) {
     v's element count decreases by one
 */
 void vector_pop(vector * v) {
-    assert(v != NULL && v->_ != NULL);
+    assert(v != NULL && v->data != NULL);
     assert(v->count > 0);
     
     --v->count;
@@ -149,11 +149,11 @@ void vector_pop(vector * v) {
     any reference to the element becomes invalid
 */
 void vector_popDeinit(vector * v) {
-    assert(v != NULL && v->_ != NULL);
+    assert(v != NULL && v->data != NULL);
     assert(v->count > 0);
     assert(v->deinit != NULL);
     
-    v->deinit(&v->_[--v->count]);
+    v->deinit(&v->data[--v->count]);
 }
 
 /**
@@ -165,10 +165,10 @@ void vector_popDeinit(vector * v) {
     the element in v at the index
 */
 void * vector_get(vector * v, size_t index) {
-    assert(v != NULL && v->_ != NULL);
+    assert(v != NULL && v->data != NULL);
     assert(index < v->count);
     
-    return v->_[index];
+    return v->data[index];
 }
 
 /**
@@ -180,10 +180,10 @@ void * vector_get(vector * v, size_t index) {
     the last element in v
 */
 void * vector_getLast(vector * v) {
-    assert(v != NULL && v->_ != NULL);
+    assert(v != NULL && v->data != NULL);
     assert(v->count > 0);
     
-    return v->_[v->count - 1];
+    return v->data[v->count - 1];
 }
 
 /**
@@ -196,7 +196,7 @@ void * vector_getLast(vector * v) {
     otherwise returns the element count of v
 */
 size_t vector_size(vector * v) {
-    if(v == NULL || v->_ == NULL)
+    if(v == NULL || v->data == NULL)
         return 0;
     
     return v->count;

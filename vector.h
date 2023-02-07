@@ -17,7 +17,7 @@ You should have received a copy of the GNU Lesser General Public License along w
 //a growable stack that stores elements by reference
 typedef struct vector {
     //element buffer
-    void * * _;
+    void * * data;
     //number of elements
     size_t count;
     //capacity of vector
