@@ -1,3 +1,5 @@
+///@file
+///@internal
 /*
 Copyright (C) 2023 MCRusher
 
@@ -14,17 +16,17 @@ You should have received a copy of the GNU Lesser General Public License along w
 #include <stddef.h>
 #include <stdbool.h>
 
-//a growable stack that stores elements by reference
+///a growable stack that stores elements by reference
 typedef struct vector {
-    //element buffer
+    ///element buffer
     void * * data;
-    //number of elements
+    ///number of elements
     size_t count;
-    //capacity of vector
+    ///capacity of vector
     size_t max;
-    //optional initializer
+    ///optional initializer
     bool(*init)(void * *);
-    //optional deinitializer
+    ///optional deinitializer
     void(*deinit)(void * *);
 } vector;
 
