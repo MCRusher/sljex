@@ -496,8 +496,9 @@ static bool vector_vinit(void * * vecspace) {
 @pre
     vecspace is a valid, allocated vector instance
 @post
-    vecspace's instance will be deallocated
+    vecspace's instance will be deinitialized and deallocated
 */
 static void vector_vdeinit(void * * vecspace) {
     vector_deinit(*vecspace);
+    free(*vecspace);
 }
